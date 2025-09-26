@@ -1,0 +1,233 @@
+#include <iostream>
+#include <vector>
+#include <unordered_set>
+ 
+struct ListNode {
+    int val;
+    ListNode* next;
+    ListNode(int x) : val(x), next(nullptr) {}
+};
+ 
+class Solution {
+public:
+    // Функция поиска цикла (алгоритм Черепахи и Зайца) - улучшенная версия
+    bool hasCycle(ListNode* head) {
+        if (head == nullptr || head->next == nullptr) {
+            return false;
+        }
+ 
+        ListNode* slow = head;
+        ListNode* fast = head;
+ 
+        while (fast != nullptr && fast->next != nullptr) {
+            slow = slow->next;
+            fast = fast->next->next;
+ 
+            if (slow == fast) {
+                return true;
+            }
+        }
+ 
+        return false;
+    }
+ 
+    // Функция для нахождения начала цикла
+    ListNode* detectCycleStart(ListNode* head) {
+        if (head == nullptr || head->next == nullptr) {
+            return nullptr;
+        }
+ 
+        ListNode* slow = head;
+        ListNode* fast = head;
+        bool hasCycle = false;
+ 
+        // Первый этап: обнаружение цикла
+        while (fast != nullptr && fast->next != nullptr) {
+            slow = slow->next;
+            fast = fast->next->next;
+ 
+            if (slow == fast) {
+                hasCycle = true;
+                break;
+            }
+        }
+ 
+        if (!hasCycle) {
+            return nullptr;
+        }
+ 
+        // Второй этап: нахождение начала цикла
+        slow = head;
+        while (slow != fast) {
+            slow = slow->next;
+            fast = fast->next;
+        }
+ 
+        return slow;
+    }
+ 
+    // Улучшенная функция вывода списка
+    void printList(ListNode* head, int maxNodes = 15) {
+        if (head == nullptr) {
+            std::cout << "NULL" << std::endl;
+            return;
+        }
+ 
+        std::unordered_set<ListNode*> visited;
+        ListNode* current = head;
+        int count = 0;
+ 
+        std::cout << "Список: ";
+        
+        while (current != nullptr && count < maxNodes) {
+            // Проверяем цикл
+            if (visited.count(current)) {
+                std::cout << "[ЦИКЛ к узлу " << current->val << "]";
+                break;
+            }
+            visited.insert(current);
+ 
+            std::cout << current->val;
+            
+            if (current->next != nullptr && !visited.count(current->next)) {
+                std::cout << " -> ";
+            }
+ 
+            current = current->next;
+            count++;
+        }
+ 
+        if (count >= maxNodes && current != nullptr) {
+            std::cout << " -> ... (превышен лимит)";
+        } else if (current == nullptr) {
+            std::cout << " -> NULL";
+        }
+ 
+        std::cout << std::endl;
+    }
+ 
+    // Функция для определения длины цикла
+    int getCycleLength(ListNode* head) {
+        if (!hasCycle(head)) return 0;
+ 
+        ListNode* meetPoint = detectCycleStart(head);
+        if (meetPoint == nullptr) return 0;
+ 
+        int length = 1;
+        ListNode* current = meetPoint->next;
+        
+        while (current != meetPoint) {
+            length++;
+            current = current->next;
+        }
+ 
+        return length;
+    }
+};
+ 
+// Вспомогательные функции для работы со списком
+class ListHelper {
+public:
+    // Создание списка из массива
+    static ListNode* createList(const std::vector<int>& values) {
+        if (values.empty()) return nullptr;
+ 
+        ListNode* head = new ListNode(values[0]);
+        ListNode* current = head;
+ 
+        for (size_t i = 1; i < values.size(); i++) {
+            current->next = new ListNode(values[i]);
+            current = current->next;
+        }
+ 
+        return head;
+    }
+ 
+    // Создание циклического списка
+    static ListNode* createCyclicList(const std::vector<int>& values, int cycleStartIndex) {
+        if (values.empty()) return nullptr;
+ 
+        ListNode* head = new ListNode(values[0]);
+        ListNode* current = head;
+        ListNode* cycleStartNode = (cycleStartIndex == 0) ? head : nullptr;
+ 
+        for (size_t i = 1; i < values.size(); i++) {
+            current->next = new ListNode(values[i]);
+            current = current->next;
+ 
+            if (i == cycleStartIndex) {
+                cycleStartNode = current;
+            }
+        }
+ 
+        // Создаем цикл
+        if (cycleStartNode != nullptr) {
+            current->next = cycleStartNode;
+        }
+ 
+        return head;
+    }
+ 
+    // Безопасное удаление списка (с обработкой циклов)
+    static void deleteList(ListNode* head) {
+        if (head == nullptr) return;
+ 
+        std::unordered_set<ListNode*> visited;
+        ListNode* current = head;
+ 
+        while (current != nullptr && !visited.count(current)) {
+            visited.insert(current);
+            ListNode* next = current->next;
+            delete current;
+            current = next;
+        }
+    }
+};
+ 
+// Демонстрация
+int main() {
+    Solution solution;
+ 
+    std::cout << "=== ТЕСТ 1: Список с циклом ===" << std::endl;
+    // Создаем: 1 -> 2 -> 3 -> 4 -> 5 -> 2 (цикл)
+    ListNode* cyclicList = ListHelper::createCyclicList({1, 2, 3, 4, 5}, 1);
+    
+    solution.printList(cyclicList);
+    std::cout << "Есть цикл: " << (solution.hasCycle(cyclicList) ? "Да" : "Нет") << std::endl;
+    
+    ListNode* cycleStart = solution.detectCycleStart(cyclicList);
+    if (cycleStart) {
+        std::cout << "Начало цикла: узел со значением " << cycleStart->val << std::endl;
+        std::cout << "Длина цикла: " << solution.getCycleLength(cyclicList) << " узлов" << std::endl;
+    }
+ 
+    std::cout << "\n=== ТЕСТ 2: Список без цикла ===" << std::endl;
+    ListNode* normalList = ListHelper::createList({1, 2, 3, 4, 5});
+    
+    solution.printList(normalList);
+    std::cout << "Есть цикл: " << (solution.hasCycle(normalList) ? "Да" : "Нет") << std::endl;
+ 
+    std::cout << "\n=== ТЕСТ 3: Пустой список ===" << std::endl;
+    ListNode* emptyList = nullptr;
+    
+    solution.printList(emptyList);
+    std::cout << "Есть цикл: " << (solution.hasCycle(emptyList) ? "Да" : "Нет") << std::endl;
+ 
+    std::cout << "\n=== ТЕСТ 4: Список из одного элемента с циклом ===" << std::endl;
+    ListNode* singleNode = new ListNode(42);
+    singleNode->next = singleNode; // Цикл на себя
+    
+    solution.printList(singleNode);
+    std::cout << "Есть цикл: " << (solution.hasCycle(singleNode) ? "Да" : "Нет") << std::endl;
+    
+    if (solution.hasCycle(singleNode)) {
+        std::cout << "Длина цикла: " << solution.getCycleLength(singleNode) << " узлов" << std::endl;
+    }
+ 
+    // Очистка памяти
+    ListHelper::deleteList(cyclicList);
+    ListHelper::deleteList(normalList);
+    ListHelper::deleteList(singleNode);
+ 
+    return 0;
+}
